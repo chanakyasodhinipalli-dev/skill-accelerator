@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Skill Accelerator Console</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#9636;</text></svg>"
+    />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-text" id="app-title">Skill Accelerator</span>
+        <span class="env-banner" id="env-banner" hidden></span>
+      </div>
+
+      <div class="topbar-controls">
+        <label class="control">
+          <span class="control-label">Acting as</span>
+          <input
+            id="participant"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="The person these actions are attributed to"
+          />
+        </label>
+
+        <label class="control">
+          <span class="control-label">Model</span>
+          <select id="profile-picker" aria-label="Model profile used for this request"></select>
+        </label>
+
+        <button id="theme-toggle" class="icon-button" type="button" title="Switch theme">
+          <span aria-hidden="true">◑</span><span class="sr-only">Switch theme</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="shell">
+      <nav class="sidebar" aria-label="Sections">
+        <ul id="nav"></ul>
+        <div class="sidebar-foot">
+          <div class="status-dot" id="api-status" title="Platform API">API</div>
+          <span id="api-mode" class="muted"></span>
+        </div>
+      </nav>
+
+      <main id="main" tabindex="-1">
+        <div id="view" class="view" aria-live="polite"></div>
+      </main>
+    </div>
+
+    <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+    <dialog id="modal" class="modal"></dialog>
+
+    <script type="module" src="/assets/js/app.js"></script>
+  </body>
+</html>

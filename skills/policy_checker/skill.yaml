@@ -1,0 +1,37 @@
+name: compliance.check_policy
+version: 0.2.0
+description: >-
+  Evaluate a document or record against a declarative rule set and return
+  per-rule findings with severities and an overall pass/fail verdict. Use as a
+  gate before releasing content or committing a transaction.
+entrypoint: skill.py
+
+category: validation
+stability: beta
+owner: compliance-engineering
+tags: [compliance, governance, validation]
+
+required_permissions:
+  - skills:compliance:evaluate
+
+timeout_seconds: 45
+max_retries: 0
+idempotent: true
+
+output_schema:
+  type: object
+  properties:
+    passed: { type: boolean }
+    findings: { type: array }
+    evaluated_rules: { type: integer }
+    highest_severity: { type: [string, "null"] }
+  required: [passed, findings, evaluated_rules]
+
+examples:
+  - input:
+      content: "Wire the funds to account 4111-1111-1111-1111 before Friday."
+      rules:
+        - id: no-card-numbers
+          severity: critical
+          pattern: '\d{4}-\d{4}-\d{4}-\d{4}'
+          message: A payment card number appears in the content.

@@ -1,0 +1,95 @@
+# Multi-vendor model configuration.
+#
+#   SA_CONFIG_FILE=examples/config/llm-profiles.yaml sa-console
+#
+# Nothing here holds a credential. Each profile names the environment variable
+# that does, so the file is safe to commit and a key rotation is a restart.
+
+llm:
+  # Which profile serves requests. Change it here, with
+  # `POST /providers/{name}/activate`, or from the console's Models page.
+  active_profile: openai
+
+  # Tried in order when the active profile fails with a *retryable* error —
+  # a rate limit, a timeout, a 5xx. A rejected request is not retried
+  # elsewhere: it would fail identically and cost twice.
+  fallback_profiles: [anthropic, gemini]
+
+  # Set false in production if the model in use must only change by deployment.
+  allow_runtime_switch: true
+
+  profiles:
+    # -- direct vendor access -------------------------------------------------
+    # The platform default. Declaring it here overrides the built-in `openai`
+    # profile that the top-level llm settings would otherwise produce.
+    - name: openai
+      vendor: openai
+      model: gpt-4o
+      label: OpenAI GPT-4o
+      description: Chat Completions — the shape every OpenAI-compatible server speaks.
+      api_key_env: OPENAI_API_KEY
+      temperature: 0.2
+
+    - name: anthropic
+      vendor: anthropic
+      model: claude-opus-5
+      label: Claude Opus 5
+      description: Reached through the official SDK — streaming, prompt caching, tool use.
+      api_key_env: ANTHROPIC_API_KEY
+      effort: high
+      # No temperature or top_p: current Claude models reject them, and the
+      # config layer refuses the profile rather than letting every request 400.
+
+    - name: gemini
+      vendor: gemini
+      model: gemini-2.0-flash
+      label: Google Gemini Flash
+      api_key_env: GEMINI_API_KEY
+      temperature: 0.2
+
+    # -- through an enterprise gateway ---------------------------------------
+    # `dialect` is what *this* side of the call looks like. The gateway may
+    # route to any vendor behind it; that is its business, not ours.
+    - name: corp-gateway
+      vendor: gateway
+      dialect: openai
+      model: gpt-4o
+      label: Corporate LLM gateway
+      description: Central broker with quota, audit, and DLP applied on the way out.
+      base_url: https://llm-gateway.corp.internal/v1
+      api_key_env: SA_GATEWAY_API_KEY
+      auth_header: x-virtual-key      # blank uses the vendor default
+      headers:
+        x-cost-centre: risk-platform
+        x-tenant-id: emea
+
+    # Azure OpenAI is the OpenAI dialect at a different endpoint, with the
+    # credential in `api-key` and a mandatory api-version.
+    - name: azure
+      vendor: gateway
+      dialect: openai
+      model: gpt-4o
+      label: Azure OpenAI (EU)
+      base_url: https://contoso.openai.azure.com/openai/deployments/gpt4o
+      api_key_env: AZURE_OPENAI_API_KEY
+      auth_header: api-key
+      api_version: "2024-10-21"
+
+    # A broker that speaks Anthropic's Messages API rather than OpenAI's.
+    - name: bedrock-broker
+      vendor: gateway
+      dialect: anthropic
+      model: claude-opus-5
+      label: Claude via the internal broker
+      base_url: https://llm-gateway.corp.internal/anthropic/v1
+      api_key_env: SA_GATEWAY_API_KEY
+      auth_header: x-virtual-key
+      enabled: false
+
+    # -- no model at all ------------------------------------------------------
+    # Always present even when not declared. Everything the platform decides in
+    # code still works; only generated wording falls back to fixed phrasing.
+    - name: stub
+      vendor: stub
+      model: deterministic
+      label: Deterministic (no model)

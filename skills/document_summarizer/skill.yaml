@@ -1,0 +1,41 @@
+# Skill manifest. Values here override anything the @skill decorator derived,
+# so permissions and stability are reviewable without reading Python.
+name: document.summarize
+version: 1.0.0
+description: >-
+  Summarize a document into a short abstract with key points and an extractive
+  set of supporting sentences. Use for long-form text where a reader needs the
+  gist before deciding whether to read the whole thing.
+entrypoint: skill.py
+
+category: analysis
+stability: stable
+owner: knowledge-platform
+tags: [text, summarization, nlp]
+
+required_permissions:
+  - skills:document:read
+
+timeout_seconds: 30
+max_retries: 2
+idempotent: true
+expose_as_tool: true
+
+output_schema:
+  type: object
+  properties:
+    summary: { type: string }
+    key_points: { type: array, items: { type: string } }
+    original_words: { type: integer }
+    summary_words: { type: integer }
+    compression_ratio: { type: number }
+  required: [summary, key_points, original_words, summary_words]
+
+examples:
+  - input:
+      text: >-
+        The quarterly review covered three areas. Revenue grew 12 percent year
+        over year, driven mainly by the enterprise segment. Operating costs rose
+        8 percent, largely from headcount in engineering. Management expects
+        margin expansion in the second half as hiring slows.
+      max_points: 3

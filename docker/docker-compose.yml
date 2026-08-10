@@ -1,0 +1,46 @@
+name: skill-accelerator
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: skill-accelerator:local
+    ports:
+      - "8000:8000"
+    environment:
+      SA_ENVIRONMENT: dev
+      SA_LOGGING__FORMAT: json
+      SA_LOGGING__LEVEL: INFO
+      SA_API__DOCS_ENABLED: "true"
+      SA_TELEMETRY__OTLP_ENDPOINT: http://otel-collector:4317
+      # Credentials come from the host environment, never from this file.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      # Mounted read-only so a running container cannot rewrite its own
+      # skill definitions.
+      - ../skills:/app/skills:ro
+      - ../examples:/app/examples:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./otel-collector.yaml:/etc/otel/config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    restart: unless-stopped

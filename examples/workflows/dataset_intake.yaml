@@ -1,0 +1,74 @@
+# Dataset intake with a saga-style rollback.
+#
+# Demonstrates compensation: if a later step fails, `compensate_with` steps run
+# in reverse completion order to undo the work that already succeeded.
+
+name: dataset_intake
+version: 1.0.0
+description: Profile an incoming dataset, gate on quality, and record the outcome.
+owner: data-platform
+tags: [data, intake]
+
+inputs_schema:
+  type: object
+  properties:
+    dataset_id: { type: string }
+    rows:
+      type: array
+      items: { type: object }
+    max_null_ratio:
+      type: number
+      description: Reject the dataset if any column exceeds this null ratio.
+  required: [dataset_id, rows]
+
+steps:
+  - id: profile
+    type: skill
+    target: data.profile
+    description: Compute column types, null rates, and quality warnings.
+    inputs:
+      rows: ${inputs.rows}
+    timeout_seconds: 60
+    # Registering the profile is the side effect that must be undone if a
+    # later step fails.
+    compensate_with: rollback_registration
+
+  - id: quality_gate
+    type: transform
+    description: Decide whether the dataset is fit to accept.
+    depends_on: [profile]
+    inputs:
+      dataset_id: ${inputs.dataset_id}
+      row_count: ${steps.profile.output.row_count}
+      column_count: ${steps.profile.output.column_count}
+      warnings: ${steps.profile.output.warnings}
+      accepted: ${steps.profile.output.row_count > 0}
+
+  - id: record_outcome
+    type: transform
+    description: Emit the intake record.
+    # Both are listed because both are read below. Declaring only the
+    # transitive parent would leave the profile binding racy.
+    depends_on: [quality_gate, profile]
+    when: ${steps.quality_gate.output.accepted}
+    inputs:
+      dataset_id: ${inputs.dataset_id}
+      status: accepted
+      profiled_columns: ${steps.profile.output.column_count}
+
+  # Referenced by compensate_with; never scheduled as a normal step because
+  # nothing depends on it and it has no dependencies satisfied at level 0.
+  - id: rollback_registration
+    type: transform
+    description: Undo the dataset registration performed by the profile step.
+    when: ${false}
+    inputs:
+      dataset_id: ${inputs.dataset_id}
+      action: deregister
+      reason: intake failed after profiling
+
+outputs:
+  dataset_id: ${inputs.dataset_id}
+  accepted: ${steps.quality_gate.output.accepted}
+  warnings: ${steps.profile.output.warnings}
+  record: ${steps.record_outcome.output}

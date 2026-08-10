@@ -1,0 +1,129 @@
+[project]
+name = "skill-accelerator"
+version = "0.1.0"
+description = "Enterprise skill, tool, and orchestration platform (monorepo root / meta-distribution)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "AIMeD.ai Platform Engineering" }]
+
+dependencies = [
+  "sa-platform",
+  "sa-skills",
+  "sa-tools",
+  "sa-connectors",
+  "sa-orchestrator",
+  "sa-forms",
+  "sa-api",
+  "sa-cli",
+  "sa-console",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.24",
+  "pytest-cov>=5.0",
+  "ruff>=0.6",
+  "mypy>=1.11",
+  "types-PyYAML",
+  "respx>=0.21",
+  "pre-commit>=3.8",
+]
+
+# ---------------------------------------------------------------------------
+# uv workspace: `uv sync` resolves every package from the local tree.
+# Falls back to `make install` (pip -e per package) when uv is unavailable.
+# ---------------------------------------------------------------------------
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+sa-platform = { workspace = true }
+sa-skills = { workspace = true }
+sa-tools = { workspace = true }
+sa-connectors = { workspace = true }
+sa-orchestrator = { workspace = true }
+sa-forms = { workspace = true }
+sa-api = { workspace = true }
+sa-cli = { workspace = true }
+sa-console = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+bypass-selection = true
+
+# ---------------------------------------------------------------------------
+# Shared tooling configuration for every package in the workspace.
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["packages/*/src", "skills", "tests"]
+
+[tool.ruff.lint]
+# BLE is enabled deliberately: this codebase catches broad exceptions in a
+# handful of places (isolating one bad skill, keeping a saga rolling back,
+# normalising a failure into a result), and each one carries an explanatory
+# `# noqa: BLE001`. Leaving BLE disabled would make those markers decorative.
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RUF", "ASYNC", "S", "BLE"]
+ignore = [
+  "E501",   # line length is enforced by the formatter
+  "B008",   # FastAPI Depends() in argument defaults is the documented idiom
+  "B027",   # empty methods in an ABC are optional lifecycle hooks by design
+  "S101",   # asserts are fine in tests
+  "UP038",  # isinstance(x, (int, float)) reads better than the | form, and
+            # this rule is deprecated upstream
+]
+
+[tool.ruff.lint.per-file-ignores]
+# RUF001 flags "ambiguous" unicode. These two files deliberately contain smart
+# quotes and dashes: one is the PDF renderer's Latin-1 substitution table, the
+# other is the test that proves the substitution works.
+"tests/**" = ["S", "N802", "BLE"]
+"tests/test_forms.py" = ["S", "N802", "BLE", "RUF001"]
+# Response-shape doubles are throwaway classes; ClassVar adds noise, not safety.
+"tests/test_llm_provider.py" = ["S", "N802", "BLE", "RUF012"]
+"packages/sa-forms/src/sa_forms/rendering.py" = ["RUF001"]
+# `makeRecord` overrides a stdlib method; the name and signature are fixed.
+"packages/sa-platform/src/sa_platform/logging.py" = ["N802"]
+"packages/*/src/**/builtin/*.py" = ["S310"]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+  "sa_platform", "sa_skills", "sa_tools", "sa_connectors",
+  "sa_orchestrator", "sa_forms", "sa_api", "sa_cli", "sa_console",
+]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
+mypy_path = "packages/sa-platform/src:packages/sa-skills/src:packages/sa-tools/src:packages/sa-connectors/src:packages/sa-orchestrator/src:packages/sa-forms/src:packages/sa-api/src:packages/sa-cli/src:packages/sa-console/src"
+
+[tool.pytest.ini_options]
+# 7.4 is the floor; pytest-asyncio's `asyncio_mode = auto` works from 0.21.
+minversion = "7.4"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-q --strict-markers"
+markers = [
+  "integration: requires network or external services",
+  "slow: long-running test",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["sa_platform", "sa_skills", "sa_tools", "sa_connectors", "sa_orchestrator", "sa_forms", "sa_api", "sa_cli", "sa_console"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "raise NotImplementedError"]

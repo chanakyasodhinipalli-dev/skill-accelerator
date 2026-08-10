@@ -1,0 +1,35 @@
+name: data.profile
+version: 1.0.0
+description: >-
+  Profile a tabular dataset supplied as a list of row objects: per-column type
+  inference, null and distinct counts, numeric distribution statistics, and a
+  set of data-quality warnings. Use before trusting an unfamiliar dataset.
+entrypoint: skill.py
+
+category: analysis
+stability: stable
+owner: data-platform
+tags: [data, quality, profiling]
+
+required_permissions:
+  - skills:data:read
+
+timeout_seconds: 60
+max_retries: 1
+idempotent: true
+
+output_schema:
+  type: object
+  properties:
+    row_count: { type: integer }
+    column_count: { type: integer }
+    columns: { type: object }
+    warnings: { type: array, items: { type: string } }
+  required: [row_count, column_count, columns, warnings]
+
+examples:
+  - input:
+      rows:
+        - { id: 1, amount: 120.5, region: "EMEA" }
+        - { id: 2, amount: 98.0, region: "AMER" }
+        - { id: 3, amount: null, region: "EMEA" }

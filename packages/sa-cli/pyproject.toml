@@ -1,0 +1,28 @@
+[project]
+name = "sa-cli"
+version = "0.1.0"
+description = "Operator CLI for the Skill Accelerator platform"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+
+dependencies = [
+  "sa-platform",
+  "sa-skills",
+  "sa-tools",
+  "sa-connectors",
+  "sa-orchestrator",
+  "sa-forms",
+  "sa-api",
+  "typer>=0.12",
+  "rich>=13.7",
+]
+
+[project.scripts]
+sa = "sa_cli.main:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sa_cli"]

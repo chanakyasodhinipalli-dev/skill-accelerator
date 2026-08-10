@@ -1,0 +1,220 @@
+# An agreement form: the agreements *are* the content.
+#
+# `kind: agreement` changes three things:
+#   * `sections` becomes optional — this one asks for two identifying details,
+#     and a form of this kind may legitimately ask for nothing at all.
+#   * The terms are put **one at a time** rather than bundled. Five clauses
+#     behind a single "I agree" is the record this exists to replace.
+#   * "Complete" means every required agreement is decided, not that a field
+#     count was reached — a form with no fields is otherwise complete the moment
+#     it starts.
+#
+# Everything else is the same machinery: the same conversation, the same
+# questions-and-escalation ladder, the same artifacts, the same approval and
+# baselining.
+
+name: platform_access_agreement
+version: 1.0.0
+kind: agreement
+title: Platform Access Agreement
+description: >-
+  The terms someone accepts before they are given access to the platform, and
+  the record that they accepted them.
+status: active
+owner: platform-governance
+tags: [access, governance, agreement]
+
+guidance: >-
+  You are taking someone through the terms of platform access. Do not
+  paraphrase, summarise, or soften any of them — present each one as written and
+  let them decide. If they ask what something means, answer it from the notes;
+  if the notes do not cover it, put them on to the team rather than guessing.
+  Somebody who declines is doing the right thing if they are unsure.
+
+output_formats: [pdf, markdown, json]
+collect_action_items: false
+# Nothing to be inconsistent with: this form holds decisions, not values.
+semantic_consistency_review: false
+
+escalation:
+  - id: governance
+    team: Platform Governance
+    contact: platform-governance@example.com
+    channel: email
+    note: They own these terms and can answer anything about what they commit you to.
+    sla: two business days
+
+  - id: security
+    team: Security Engineering
+    contact: security@example.com
+    channel: ticket
+    covers: [credential_handling, incident_reporting]
+    note: They own credential policy, key rotation, and what counts as an incident.
+    sla: one business day
+
+knowledge:
+  - id: what_is_production_data
+    title: What counts as production data
+    text: >-
+      Production data is any data originating from a live customer system,
+      including exports, backups, and extracts taken from one. A synthetic or
+      masked dataset is not production data. If a dataset was derived from
+      production and not masked, it is still production data.
+    source: Data Handling Standard §2
+    applies_to: [production_data_handling]
+
+  - id: incident_window
+    title: What "promptly" means for an incident
+    text: >-
+      A suspected exposure of credentials or production data must be reported
+      within one hour of noticing it, at any time of day. Reporting something
+      that turns out to be nothing carries no penalty; the standard exists so
+      the decision to investigate is not yours to make alone.
+    source: Security Incident Policy §3.1
+    applies_to: [incident_reporting]
+
+# Two identifying details. An agreement form may declare none at all — this one
+# does because an acceptance record nobody can tie to a person or a team is
+# evidence of very little.
+sections:
+  - id: who
+    title: Who is accepting
+    order: 0
+    description: The person accepting these terms, and who they answer to.
+    opening_prompt: >-
+      Before the terms themselves — who are you, and which team are you joining
+      the platform on behalf of?
+    fields:
+      - id: accepting_party
+        label: Accepting party
+        type: person
+        importance: mandatory
+        description: The person accepting these terms.
+        rationale: >-
+          An acceptance record that cannot be tied to a person proves nothing.
+          This is the name that appears on the document.
+        aliases: [name, who is accepting, signatory]
+        require_explicit: true
+        requires_named_party: true
+
+      - id: sponsoring_team
+        label: Sponsoring team
+        type: string
+        importance: mandatory
+        description: The team accountable for this person's use of the platform.
+        rationale: >-
+          Access is granted to a person but accounted for by a team. Without one
+          named here there is nobody to ask when the access needs reviewing.
+        aliases: [team, department, business unit, cost centre]
+        requires_named_party: true
+
+agreements:
+  - id: acceptable_use
+    title: Acceptable use
+    kind: user
+    stage: before_start
+    version: 1.0.0
+    text: >-
+      I will use platform access only for work I have been asked to do, and only
+      through the interfaces provided. I will not share my credentials, use
+      another person's, or attempt to reach data or systems outside what my role
+      requires.
+    prompt: >-
+      Do you accept that? Reply 'I agree', or ask me anything about it first.
+    route: governance
+    # Every clause carries the answers to the questions it provokes. A term the
+    # assistant cannot explain is a term that becomes a two-day ticket the first
+    # time somebody asks what it means — and they always ask.
+    explanation: >-
+      In plain terms: use your own access, for your own work, through the normal
+      tools. Don't go looking at data you have no reason to see, and don't lend
+      your credentials to anybody, including a colleague in a hurry.
+    faqs:
+      - question: What if a colleague needs my access urgently?
+        aliases: [can I share my credentials, lending access, someone else needs it]
+        answer: >-
+          Never share credentials, however urgent. Request access for them
+          instead — it is usually granted the same day, and a shared credential
+          makes every action taken under it unattributable, including yours.
+      - question: What counts as work I have been asked to do?
+        aliases: [what is in scope, how do I know what my role requires]
+        answer: >-
+          Anything within your team's remit or assigned to you. Exploring a
+          system out of curiosity, or looking up a record for someone outside
+          the process, is not — even where your access technically permits it.
+
+  - id: credential_handling
+    title: Credential handling
+    kind: user
+    stage: before_start
+    version: 1.0.0
+    text: >-
+      I will keep platform credentials in the approved secret store, never in
+      source control, a spreadsheet, a ticket, or a message. I will rotate any
+      credential I believe may have been exposed, and I will not create
+      long-lived credentials where a short-lived one will do.
+    on_decline: >-
+      That's recorded. This one is required, so access can't be granted — but if
+      it's a question of what the approved store is or how rotation works,
+      Security can walk you through it and we can pick this back up.
+    route: security
+    explanation: >-
+      Credentials live in the secret store and nowhere else — not in a repo, not
+      in a ticket, not in a chat message, not in a spreadsheet on your laptop.
+      If you think one has leaked, rotate it; nobody will mind that you did.
+    faqs:
+      - question: What is the approved secret store?
+        aliases: [where do I keep credentials, which store, where should secrets go]
+        answer: >-
+          The platform vault, reachable from the developer portal. If your team
+          uses something else today, Security will tell you whether it counts —
+          ask before you assume it does.
+      - question: What if I have already committed a credential to source control?
+        aliases: [I committed a secret, credential in a repo, leaked a key]
+        answer: >-
+          Rotate it now, then report it. Removing the commit is not enough — the
+          history keeps it, and rotation is the only thing that actually closes
+          the exposure. Reporting it carries no penalty.
+
+  - id: production_data_handling
+    title: Production data
+    kind: user
+    stage: before_start
+    version: 1.0.0
+    text: >-
+      I will not copy production data onto a personal device, a local database,
+      or any system outside the platform's approved environments, and I will not
+      use production data in a test or development context without written
+      approval from the data owner.
+    route: security
+
+  - id: incident_reporting
+    title: Reporting an incident
+    kind: user
+    stage: before_start
+    version: 1.0.0
+    text: >-
+      If I believe credentials or production data have been exposed, I will
+      report it promptly through the security channel, even where I am not
+      certain and even where the exposure may be mine.
+    route: security
+
+  - id: monitoring_notice
+    title: How this access is monitored
+    kind: system
+    stage: before_start
+    version: 1.0.0
+    text: >-
+      Platform activity is logged, including the queries you run and the records
+      you read. Logs are retained for two years and are reviewed on a schedule
+      and in response to an incident. They are not used for performance
+      management.
+    prompt: >-
+      That one is us telling you, not asking. Acknowledge it and we're done.
+    route: governance
+
+approval:
+  required_approvals: 1
+  approver_roles: [platform_governance]
+  allow_self_approval: false
+  reopen_on_rejection: true

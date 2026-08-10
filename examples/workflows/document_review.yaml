@@ -1,0 +1,83 @@
+# Document review pipeline.
+#
+# Demonstrates the core orchestration features: parallel fan-out, expression
+# bindings, a conditional branch, and output projection.
+#
+#   sa workflows graph document_review
+#   sa workflows run document_review -i '{"text": "...", "rules": []}'
+
+name: document_review
+version: 1.0.0
+description: Summarize a document and check it against compliance policy in parallel.
+owner: knowledge-platform
+tags: [document, compliance]
+
+inputs_schema:
+  type: object
+  properties:
+    text:
+      type: string
+      description: The document to review.
+    rules:
+      type: array
+      description: Policy rules to evaluate against.
+      items: { type: object }
+    max_points:
+      type: integer
+      description: Key points to extract.
+  required: [text]
+
+max_parallel: 4
+timeout_seconds: 300
+
+steps:
+  # These two have no dependency on each other, so the engine runs them
+  # concurrently in level 0.
+  - id: summarize
+    type: skill
+    target: document.summarize
+    description: Produce an abstract and key points.
+    inputs:
+      text: ${inputs.text}
+      max_points: ${inputs.max_points}
+    retry:
+      max_attempts: 3
+      base_delay_seconds: 0.5
+
+  - id: policy
+    type: skill
+    target: compliance.check_policy
+    description: Evaluate the document against the supplied rule set.
+    inputs:
+      content: ${inputs.text}
+      rules: ${inputs.rules}
+      fail_on: high
+    # A missing rule set is not a reason to fail the whole review.
+    on_error: continue
+
+  # Runs only when policy evaluation found a blocking violation.
+  - id: escalation_notice
+    type: transform
+    description: Build the escalation payload for a blocked document.
+    depends_on: [policy]
+    when: ${steps.policy.output.passed == false}
+    inputs:
+      status: blocked
+      highest_severity: ${steps.policy.output.highest_severity}
+      finding_count: ${steps.policy.output.evaluated_rules}
+      message: This document was blocked by compliance policy and needs review.
+
+  - id: assemble
+    type: transform
+    description: Combine both branches into the review record.
+    depends_on: [summarize, policy]
+    inputs:
+      summary: ${steps.summarize.output.summary}
+      key_points: ${steps.summarize.output.key_points}
+      compression_ratio: ${steps.summarize.output.compression_ratio}
+      compliance_passed: ${steps.policy.output.passed}
+      findings: ${steps.policy.output.findings}
+
+outputs:
+  review: ${steps.assemble.output}
+  escalation: ${steps.escalation_notice.output}

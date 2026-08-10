@@ -1,0 +1,585 @@
+# Reference form definition.
+#
+# Everything the conversation engine does is driven from this file. Note in
+# particular:
+#   * `rationale` — the verbatim answer when a user asks "why do you need this?"
+#   * `aliases`   — what people actually call the field in JIRA and email
+#   * `ask_when`  — conditional fields, so irrelevant topics are never raised
+#   * `require_explicit` — never infer this; make the speaker state it
+
+name: change_request
+version: 1.0.0
+title: Production Change Request
+description: >-
+  Captures everything needed to review and approve a production change:
+  what is changing, when, the risk, and how it would be rolled back.
+status: active
+owner: platform-governance
+tags: [change-management, governance]
+
+guidance: >-
+  You are helping an engineer raise a production change request. They are busy
+  and know their system well, so stay brief and concrete. Prefer their
+  terminology.
+
+  Risk and rollback are their judgement, not yours — but when they ask what you
+  think, answer with a proposal grounded in what they have already told you and
+  let them confirm it. Refusing to engage makes them restate their own words.
+  What you must never do is record a judgement they have not agreed to.
+
+output_formats: [xlsx, pdf, markdown]
+collect_action_items: true
+
+# Ask about what belongs together rather than section by section. The change
+# owner (overview) and the reviewer (sign-off) are two sections and one
+# question. Set false where the section order is itself a requirement.
+group_by_affinity: true
+
+# ---------------------------------------------------------------------------
+# What the participant agrees to, and when
+# ---------------------------------------------------------------------------
+#
+# `text` is presented verbatim, stored verbatim, and hashed. Change the wording
+# and you must bump `version` — a session that accepted 1.0.0 has accepted the
+# words that were in 1.0.0.
+agreements:
+  - id: recording_notice
+    title: How this conversation is recorded
+    kind: system
+    stage: before_start
+    version: 1.0.0
+    text: >-
+      What you type here is stored against this change request, including the
+      exact words you use, and appears in the provenance appendix of the
+      document your approver reads. Anything you attach is read and stored the
+      same way. The record is retained for seven years under the change
+      management policy.
+    prompt: >-
+      Reply 'I agree' and we'll get started, or ask me anything about this first.
+    route: governance
+    # The plain-language version, offered the moment someone asks what a clause
+    # means. Without it "what does this mean?" becomes a ticket and a two-day
+    # wait, which is a worse experience than the paper form this replaces.
+    explanation: >-
+      In short: this conversation is the record. Everything you type is kept
+      against this change request and an approver will read it, including the
+      exact words you use rather than a summary of them. It is kept for seven
+      years because change records are audited.
+    faqs:
+      - question: Why is it retained for seven years?
+        aliases:
+          [
+            what does retention mean,
+            how long is it kept,
+            why seven years,
+            tell me about the retention policy,
+          ]
+        answer: >-
+          Seven years is the retention period the change management policy sets
+          for production change records, so an auditor can trace a change made
+          today back to the reason for it years later. It applies to the record
+          of this request, not to anything else you do on the platform.
+      - question: Who can see what I type here?
+        aliases: [who reads this, who has access, is this private]
+        answer: >-
+          The approver for this change, anyone in the change management process
+          who reviews it, and auditors. It is not shared outside that, and it is
+          not used to assess your performance.
+      - question: What happens to attachments?
+        aliases: [what about files I upload, are attachments stored]
+        answer: >-
+          Anything you attach is read for the answers it contains and stored
+          with the request, exactly like the text you type. If a file shouldn't
+          be kept for seven years, don't attach it — tell me what's in it
+          instead.
+
+  - id: authority_to_raise
+    title: Authority to raise this change
+    kind: user
+    stage: before_start
+    version: 1.0.0
+    text: >-
+      I am authorised to raise this change on behalf of the team that owns the
+      affected system, and the people named in it know they are named.
+    on_decline: >-
+      That's recorded, and it's the right answer if you're not sure. A change
+      raised without authority gets sent back at the board, which costs you a
+      week rather than the ten minutes it takes to check.
+    route: change_management
+    explanation: >-
+      You're confirming two things: that the team owning the system you're
+      changing is content for you to raise this, and that anyone you name in it
+      — the reviewer, the approver — knows they've been named. It doesn't make
+      you personally liable for the change; it stops requests arriving on behalf
+      of teams who have not heard of them.
+    faqs:
+      - question: What counts as being authorised?
+        aliases: [how do I know if I'm authorised, who authorises me, am I authorised]
+        answer: >-
+          If you work on the system, or your team owns it, you're authorised.
+          If you're raising it for another team, you need someone from that team
+          to have asked you to. When in doubt, decline this and I'll put you on
+          to Change Management rather than have it sent back at the board.
+      - question: Do the people I name have to have agreed already?
+        aliases: [do they need to know, must the reviewer agree first]
+        answer: >-
+          They need to know they're named — a reviewer finding out at the board
+          that they reviewed something is the failure this prevents. They don't
+          have to have signed anything yet; that happens at approval.
+
+  - id: submission_is_accurate
+    title: Confirmation of accuracy
+    kind: confirmation
+    stage: before_review
+    version: 1.0.0
+    text: >-
+      The details above are accurate to the best of my knowledge, and the
+      rollback plan is one I am prepared to execute during the change window.
+    prompt: >-
+      Confirm that and I'll put it forward for approval. If anything above is
+      wrong, tell me what to change instead.
+
+# ---------------------------------------------------------------------------
+# Who answers what the form cannot
+# ---------------------------------------------------------------------------
+escalation:
+  - id: change_management
+    team: Change Management
+    contact: change-management@example.com
+    channel: email
+    note: >-
+      They own this form, the freeze calendar, and what counts as an emergency
+      change.
+    sla: one business day
+
+  - id: governance
+    team: Platform Governance
+    contact: "#platform-governance"
+    channel: chat
+    covers: [risk, approvals]
+    note: They decide approval thresholds and who has to sign what.
+    sla: two business days
+
+  - id: sre
+    team: SRE On-Call
+    contact: sre-oncall@example.com
+    channel: ticket
+    covers: [maintenance_window, expected_downtime, monitoring_plan]
+    note: They own the maintenance calendar and the alerting the change will trip.
+
+# ---------------------------------------------------------------------------
+# What the assistant may answer questions from
+# ---------------------------------------------------------------------------
+#
+# Nothing outside these notes and the field definitions is invented. A question
+# they do not cover is routed to a team rather than guessed at — a confident
+# wrong answer about an approval threshold costs somebody a rejected submission.
+knowledge:
+  - id: customer_impact_definition
+    title: What counts as customer impacting
+    text: >-
+      A change is customer impacting if a customer could notice it: an outage, a
+      degraded response time, a changed screen, or an email they receive. It is
+      not customer impacting merely because it touches a customer-facing system.
+      Internal-only tooling is never customer impacting.
+    applies_to: [customer_impacting, customer_comms_owner]
+    source: Change Management Policy §4.2
+
+  - id: emergency_changes
+    title: Emergency changes
+    text: >-
+      A change needed within 48 hours to prevent or resolve an incident is an
+      emergency change. It follows this same form but is approved by the on-call
+      change manager rather than at the weekly board, and the record must say
+      which incident prompted it.
+    source: Change Management Policy §7
+
+  - id: risk_vs_impact
+    title: Technical risk against business impact
+    text: >-
+      Technical risk is how likely the change is to go wrong. Business impact is
+      how much it hurts if it does. They are recorded separately because they
+      drive different approvals — a config flag flip on a revenue platform is
+      genuinely low risk and high impact, and that pair is not a contradiction.
+    applies_to: [risk_level, business_impact]
+    source: Change Management Policy §5.1
+
+# Cross-field checks, run once the answers stop moving. `when` is true when
+# something is WRONG. These are the contradictions this form's owner considers
+# worth a question — the model looks for the rest.
+#
+# Scope available to `when`:
+#   answers.<id>    the value        answered.<id>   settled and non-empty
+#   text.<id>       lowercased text  days.<id>       days from today (dates)
+semantic_consistency_review: true
+consistency_rules:
+  - id: downtime_without_customer_impact
+    when: >-
+      ${answered.expected_downtime and text.expected_downtime != "none"
+      and answers.customer_impacting == false}
+    message: >-
+      An outage is expected but the change is marked as not customer impacting.
+    question: >-
+      Is the service genuinely invisible to customers during the outage, or
+      should this be marked customer impacting?
+    fields: [expected_downtime, customer_impacting]
+    severity: blocking
+
+  # Arithmetic, done in code. A model asked to compare these reported that
+  # "12 hours exceeds 8AM to 11PM, which is 15 hours" — both values read
+  # correctly and the comparison backwards, which costs the owner a turn to
+  # refute. `minutes` reads a duration or a clock range indifferently.
+  - id: downtime_exceeds_window
+    when: >-
+      ${has_minutes.expected_downtime and has_minutes.maintenance_window
+      and minutes.expected_downtime > minutes.maintenance_window}
+    message: >-
+      The expected downtime (${answers.expected_downtime}) is longer than the
+      maintenance window it has to fit inside (${answers.maintenance_window}).
+    question: >-
+      Which is right — does the window need to be longer, or is the outage
+      shorter than stated?
+    fields: [expected_downtime, maintenance_window]
+    severity: blocking
+
+  - id: high_impact_untested_rollback
+    when: >-
+      ${(answers.business_impact == "high" or answers.business_impact == "critical")
+      and answers.rollback_tested == false}
+    message: >-
+      The business impact is high but the rollback has not been rehearsed.
+    question: >-
+      Is there time to test the rollback before the window, or is this a risk
+      you're accepting knowingly?
+    fields: [business_impact, rollback_tested]
+    severity: warning
+
+  - id: self_review
+    when: ${answered.technical_reviewer and answers.technical_reviewer == answers.change_owner}
+    message: >-
+      The technical reviewer is the same person as the change owner.
+    question: >-
+      Who else has looked at this? The review exists to be a second pair of
+      eyes, and the change board will send it back without one.
+    fields: [technical_reviewer, change_owner]
+    severity: blocking
+
+  - id: self_approval
+    when: ${answered.business_approver and answers.business_approver == answers.change_owner}
+    message: >-
+      The business approver is the same person as the change owner.
+    question: >-
+      Who on the business side is accepting this risk? Self-approval is refused
+      at sign-off, so naming them now saves a rejected submission later.
+    fields: [business_approver, change_owner]
+    severity: blocking
+
+  - id: target_date_in_the_past
+    when: ${answered.target_date and days.target_date < 0}
+    message: The target date has already passed.
+    question: Has this already happened, or should the date move?
+    fields: [target_date]
+    severity: blocking
+
+  - id: no_notice_for_customer_impacting_change
+    when: ${answers.customer_impacting == true and answered.target_date and days.target_date < 2}
+    message: >-
+      A customer-impacting change is scheduled within 48 hours.
+    question: >-
+      Is there time to notify customers before the window, or is this being
+      raised as an emergency change?
+    fields: [target_date, customer_impacting, customer_comms_owner]
+    severity: warning
+
+approval:
+  required_approvals: 1
+  approver_roles: [change_manager]
+  allow_self_approval: false
+  reopen_on_rejection: true
+
+sections:
+  - id: overview
+    title: What is changing
+    order: 0
+    description: The change itself and who owns it.
+    # An invitation, not a question. Naming three things tells the participant
+    # the shape of the answer you want and they give you three things — when
+    # they arrived with the whole change in their head and would happily have
+    # typed all twelve. Everything they cover is picked up; the rest is asked
+    # for afterwards.
+    opening_prompt: >-
+      Let's get your change request together. Tell me about the change in your
+      own words — what you're doing, when, and anything you think matters. Put
+      in as much as you like in one go; I'll pick up whatever's in there and
+      come back to you for anything still missing.
+    fields:
+      - id: change_title
+        label: Change title
+        type: string
+        importance: mandatory
+        description: A one-line summary of the change.
+        rationale: >-
+          It's the line the change advisory board reads first and how the change
+          is identified in every downstream report and audit log.
+        aliases: [title, summary, change name, what changed]
+        examples: ["Upgrade payments API to v3", "Rotate database credentials"]
+        validation:
+          min_length: 8
+          max_length: 160
+
+      - id: affected_system
+        label: Affected system
+        type: string
+        importance: mandatory
+        description: The service, application, or platform being changed.
+        rationale: >-
+          Determines which team is paged if the change goes wrong, and which
+          downstream services need to be told.
+        aliases: [system, service, application, component, platform]
+
+      - id: change_owner
+        label: Change owner
+        type: person
+        importance: mandatory
+        description: The person accountable for executing and, if needed, reverting.
+        rationale: >-
+          Someone must be reachable during the change window. Without a named
+          owner there is nobody to call at 2am.
+        aliases: [owner, responsible, accountable, implementer, who is doing]
+        require_explicit: true
+        # A person or a named team — "my scrum team" is neither.
+        requires_named_party: true
+
+      - id: description
+        label: Description
+        type: text
+        importance: mandatory
+        description: What is being changed and why.
+        rationale: >-
+          The approver needs enough detail to judge the risk without having to
+          come back and ask. This is the field that removes a round of questions.
+        # Single common words — "what", "why" — are ignored when working out
+        # which field a question is about: every question contains them. Aliases
+        # that name something are worth far more than aliases that are cheap.
+        aliases: [details, background, context, what is changing, why it is needed]
+        validation:
+          min_length: 20
+
+      - id: jira_ticket
+        label: Tracking ticket
+        type: string
+        importance: recommended
+        description: The JIRA (or equivalent) ticket reference for this work.
+        rationale: >-
+          Links the approved change back to the work that motivated it, so an
+          auditor can trace a production change to a business reason.
+        aliases: [ticket, issue, jira, tracking, story]
+        examples: ["OPS-1423", "CHG-88120"]
+        # "Do you have a ticket?" is a yes/no question; this field wants the
+        # reference. Without the pattern, "yes" is stored and reads as answered
+        # while pointing at nothing.
+        validation:
+          pattern: "^[A-Za-z][A-Za-z0-9]+-[0-9]+$"
+
+  - id: scheduling
+    title: When it happens
+    order: 1
+    description: Timing and expected impact.
+    fields:
+      - id: target_date
+        label: Target date
+        type: date
+        importance: mandatory
+        description: The date the change is planned for.
+        rationale: >-
+          Checked against the freeze calendar and other in-flight changes. A
+          wrong date here means a clash nobody spots until it happens.
+        aliases: [when, date, scheduled, go live, deployment date, planned for]
+        require_explicit: true
+
+      - id: maintenance_window
+        label: Maintenance window
+        type: string
+        importance: recommended
+        description: The time window, including timezone.
+        rationale: >-
+          Tells support and on-call when to expect alerts, so a planned change
+          isn't escalated as an incident.
+        aliases: [window, time, downtime window, slot]
+        examples: ["22:00-23:30 UTC", "Saturday 02:00-04:00 IST"]
+        # "8AM to 11PM" is eight hours out between London and Bangalore. The
+        # zone is asked for explicitly rather than assumed from the operator.
+        requires_timezone: true
+
+      - id: expected_downtime
+        label: Expected downtime
+        type: string
+        importance: mandatory
+        description: How long the service will be unavailable, or "none".
+        rationale: >-
+          Drives whether customer communication is required and whether the
+          change breaches an SLA.
+        aliases: [downtime, outage, unavailability, impact duration]
+        examples: ["None", "15 minutes", "Up to 2 hours"]
+
+      - id: customer_impacting
+        label: Customer impacting
+        type: boolean
+        importance: mandatory
+        description: Whether customers will notice any effect.
+        rationale: >-
+          A customer-impacting change needs comms sign-off and a different
+          approval path.
+        aliases:
+          [
+            customer facing,
+            user impact,
+            affects customers,
+            visible to users,
+            customers impacted,
+            customer impact,
+          ]
+        # `description` says what the field holds; `help_text` says how to
+        # decide it. It is the first thing offered when someone asks what a
+        # field means, before any model is involved.
+        help_text: >-
+          Ask whether a customer could notice: an outage, a slower page, a
+          different screen, an email. Touching a customer-facing system is not
+          the same thing as a customer noticing.
+
+      - id: customer_comms_owner
+        label: Customer communications owner
+        type: person
+        importance: mandatory
+        description: Who sends the customer notification.
+        rationale: >-
+          A customer-impacting change without an owner for the message is how
+          customers find out from the status page instead of from us.
+        aliases: [comms owner, who tells customers, notification owner]
+        # A team is the usual answer here and is fine — as long as it is the
+        # team's name and not "mine".
+        requires_named_party: true
+        # Only asked when the change actually affects customers.
+        ask_when: ${answers.customer_impacting == true}
+
+  - id: risk
+    title: Risk and rollback
+    order: 2
+    description: What could go wrong and how it gets undone.
+    fields:
+      - id: risk_level
+        label: Technical risk
+        type: enum
+        importance: mandatory
+        options: [low, medium, high, critical]
+        description: How likely this change is to go wrong.
+        rationale: >-
+          Sets the approval threshold. High and critical changes need a second
+          approver and a rehearsed rollback.
+        aliases: [risk, severity, criticality, how risky, change risk, technical risk]
+
+      # Split from risk_level deliberately. "Low risk change, high business
+      # impact" is the single most common shape of a real change request, and a
+      # form with one risk field forces the owner to throw half of that away —
+      # then the approver sees "low" against a six-hour outage and stops reading.
+      - id: business_impact
+        label: Business impact
+        type: enum
+        importance: mandatory
+        options: [low, medium, high, critical]
+        description: How much it hurts if this change does go wrong.
+        rationale: >-
+          A change can be routine to execute and still take a revenue-bearing
+          platform down for a morning. Likelihood and consequence drive
+          different approvals, so they are recorded separately.
+        aliases: [impact, business risk, blast impact, severity of impact, consequence]
+
+      - id: rollback_plan
+        label: Rollback plan
+        type: text
+        importance: mandatory
+        description: The concrete steps to revert if the change fails.
+        rationale: >-
+          "Redeploy the previous version" is not a plan. Writing the steps down
+          before the change is what makes them executable under pressure.
+        aliases: [rollback, revert, back out, recovery plan, undo]
+        validation:
+          min_length: 20
+
+      - id: rollback_tested
+        label: Rollback tested
+        type: boolean
+        importance: recommended
+        description: Whether the rollback has been rehearsed in a non-production environment.
+        rationale: >-
+          An untested rollback is a hypothesis. Knowing which it is changes how
+          much confidence the approver should place in it.
+        aliases: [tested rollback, rehearsed, practised, verified rollback]
+
+      - id: blast_radius
+        label: Blast radius
+        type: text
+        importance: recommended
+        description: What else breaks if this change goes wrong.
+        rationale: >-
+          Surfaces dependencies the owner knows about and the approver does not.
+          This is where most surprises during an incident originate.
+        aliases: [dependencies, downstream, what else, impacted services, knock-on]
+
+      - id: monitoring_plan
+        label: Monitoring plan
+        type: text
+        importance: recommended
+        description: What will be watched after the change, and for how long.
+        rationale: >-
+          Determines how quickly a failed change is detected. Without it, the
+          first signal is usually a customer complaint.
+        aliases: [monitoring, observability, dashboards, alerts, what to watch]
+
+  - id: approvals
+    title: Sign-off
+    order: 3
+    description: Who has agreed to this change.
+    # Questions about who has to sign what go to governance, not to the form's
+    # owner — a section-level route saves naming it on every field.
+    route: governance
+    help_text: >-
+      Sign-off is about accountability, not permission: the reviewer is
+      accountable for the technical assessment, the business approver for
+      accepting the consequence.
+    fields:
+      - id: technical_reviewer
+        label: Technical reviewer
+        type: person
+        importance: mandatory
+        description: The engineer who has reviewed the change.
+        rationale: >-
+          A second pair of eyes on the plan before it reaches the change board.
+          The reviewer is accountable for the technical assessment.
+        aliases: [reviewer, peer review, reviewed by, technical approval]
+        require_explicit: true
+        requires_named_party: true
+
+      - id: business_approver
+        label: Business approver
+        type: person
+        importance: recommended
+        description: The business stakeholder who accepts the risk.
+        rationale: >-
+          For changes with customer or revenue impact, someone on the business
+          side needs to have accepted the trade-off knowingly.
+        aliases: [business owner, stakeholder, sponsor, business sign off]
+        # A signature belongs to a person. The comms owner above deliberately
+        # has no such rule: sending a customer notice is properly a team's job.
+        requires_named_party: true
+        ask_when: ${answers.customer_impacting == true}
+
+      - id: additional_notes
+        label: Additional notes
+        type: text
+        importance: optional
+        description: Anything else the approver should know.
+        rationale: >-
+          A catch-all for context that does not fit the other fields but would
+          change an approver's decision.
+        aliases: [notes, comments, anything else, other]
