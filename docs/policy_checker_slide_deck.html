@@ -1,0 +1,113 @@
+
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <meta charset='utf-8'>
+  <title>Policy Checker Slide Deck</title>
+  <style>
+body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+.slide { padding: 40px; min-height: 100vh; box-sizing: border-box; }
+hr { border: none; border-top: 2px solid #ccc; margin: 1.5em 0; }
+h1, h2, h3, h4 { margin: 0 0 0.5em; }
+ul { margin: 0.5em 0 1.5em 1.25em; }
+pre { background: #f5f5f5; padding: 1em; overflow-x: auto; }
+code { font-family: Consolas, monospace; }
+.section-title { color: #444; border-bottom: 1px solid #ddd; margin-bottom: 0.5em; }
+</style>
+</head>
+<body>
+<section class='slide'><h1 class='section-title'>Policy Checker Slide Deck</h1></section>
+<p>Policy Checker Skill — Slide Deck</p>
+<p>================================</p>
+
+<p>Slide 1 — Title</p>
+<p>---------------</p>
+<p>Policy Checker Skill: Data-driven Policy Evaluation</p>
+
+<p>Notes: Introduce purpose and audience (architects, leads).</p>
+
+</section>
+<section class='slide'>
+
+<p>Slide 2 — Intent</p>
+<p>-----------------</p>
+<ul>
+  <li>Encapsulate policy evaluation as a reusable skill</li>
+  <li>Decouple policy logic, schema, and presentation</li>
+</ul>
+
+<p>Notes: Emphasize reuse and separation of concerns.</p>
+
+</section>
+<section class='slide'>
+
+<p>Slide 3 — Form-as-Data</p>
+<p>----------------------</p>
+<ul>
+  <li>Questions are schemas, not hard-coded prompts</li>
+  <li>Renderer consumes schema and renders UI/Conversation</li>
+</ul>
+
+<p>Notes: Show brief example: conditional follow-up based on severity.</p>
+
+</section>
+<section class='slide'>
+
+<p>Slide 4 — Key Features</p>
+<p>----------------------</p>
+<ul>
+  <li>Dynamic questioning</li>
+  <li>Validation &amp; coercion</li>
+  <li>Metadata-rich findings</li>
+  <li>Composable checks</li>
+</ul>
+
+<p>Notes: Call out auditability and remediation suggestions.</p>
+
+</section>
+<section class='slide'>
+
+<p>Slide 5 — Integrations &amp; Observability</p>
+<p>-------------------------------------</p>
+<ul>
+  <li>LLMs, connectors, registries via clear interfaces</li>
+  <li>Audit trails: inputs, schema versions, decision metadata</li>
+</ul>
+
+<p>Notes: Mention SLA and caching strategies.</p>
+
+</section>
+<section class='slide'>
+
+<p>Slide 6 — Risks &amp; Mitigations</p>
+<p>----------------------------</p>
+<ul>
+  <li>Renderer misinterpretation -&gt; schema contract + reference renderer</li>
+  <li>Schema sprawl -&gt; registry + governance</li>
+  <li>Latency -&gt; caching &amp; async</li>
+</ul>
+
+</section>
+<section class='slide'>
+
+<p>Slide 7 — Approval Needed</p>
+<p>------------------------</p>
+<ul>
+  <li>Approve architecture, registry, and output metadata requirements</li>
+  <li>Confirm external integrations and compliance guardrails</li>
+</ul>
+
+<p>Notes: Ask reviewers for explicit sign-off items.</p>
+
+</section>
+<section class='slide'>
+
+<p>Slide 8 — Next Steps</p>
+<p>--------------------</p>
+<p>1. Publish canonical schema contract</p>
+<p>2. Produce reference renderer + demo</p>
+<p>3. Implement registry + governance</p>
+
+<p>Notes: Offer to run a short demo once approved.</p>
+</body>
+</html>
