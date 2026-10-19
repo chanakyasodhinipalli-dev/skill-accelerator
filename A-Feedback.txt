@@ -1,0 +1,10 @@
+I have reviewed the slides with my manager. Based on below review comments received I want you to regenerate the slides and related prompts for both leadership and detailed design:
+
+1. Cover the problem statement and proposed solution of tier based enablement and mention phased by approach
+2. Phase 1 is the evaluation where no build has to happen but the model enlightenment, updating triage template, triage leads owing to have further detailed discussion to identify the required Tier and specify clearly to partners on what is expected out of those tiers and why they are being allocated that, prepared a shared pool of resources from three squads for Lean and Lean+, guidelines, guardrails, approvals, governance and architecture evaluation, etc.,. 
+3. Phase 2: Is initial automation, workflow implementation, Ai enablement, agentic approach what happens within ECM space so there is no external team dependency 
+4. Phase 3: Further enhancement of automation, workflow implementation, Ai enablement, agentic approach for the outside of ECM space teams which are quicker and readily available to assist to enhance the partner onboarding journey 
+5. Phase 4: This is where most backlog going through self service approach for partners with dedicated and shared pool resources using properly as per the tier expectations and reduce the overall turnaround for partner
+Onboarding journey 
+6. Definitely showcase each phase has its own value add even if is less but definitely much better than the current or by then approach 
+7. For leadership review, keep the text on content to minimal but use the infographic representations so that it cover all the required details but we can have detailed notes on presentation as speaker notes so that the presenter  is prepared  to answer all the required questions that come up as part of the slide presentation
