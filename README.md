@@ -1,5 +1,8 @@
 # Skill Accelerator
 
+
+https://github.com/FSoft-AI4Code/CodeWiki
+
 An enterprise Python monorepo for building, governing, and orchestrating
 reusable AI capabilities.
 
